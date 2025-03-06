@@ -1,6 +1,7 @@
-require("dotenv").config();
+
 const { Telegraf } = require("telegraf");
 
+require("dotenv").config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
