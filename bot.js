@@ -2,55 +2,73 @@ require("dotenv").config();
 const { Telegraf } = require("telegraf");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const admins = [5303351099]; // Replace with Telegram Admin IDs
+const admins = [5303351099]; // Replace with actual admin IDs
 
-// AI Response (Example: Using OpenAI API)
+// Handle Spam Messages
 bot.on("text", async (ctx) => {
-  const userId = ctx.from.id;
-  const message = ctx.message.text;
+  try {
+    const userId = ctx.from.id;
+    const message = ctx.message.text;
 
-  if (message.toLowerCase().includes("spam")) {
-    ctx.deleteMessage();
-    ctx.reply("❌ Spam detected! Message removed.");
-    return;
+    if (message.toLowerCase().includes("spam")) {
+      await ctx.deleteMessage();
+      return ctx.reply("❌ Spam detected! Message removed.");
+    }
+
+    // AI Response (Replace with actual API logic)
+    const response = `🤖 AI says: "${message}"`;
+    await ctx.reply(response);
+  } catch (error) {
+    console.error("Error handling message:", error);
   }
-
-  // AI Response (Replace with real API)
-  const response = `🤖 AI says: "${message}"`;
-  ctx.reply(response);
 });
 
 // Admin Commands
-bot.command("ban", (ctx) => {
-  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
+bot.command("ban", async (ctx) => {
+  try {
+    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
 
-  const userToBan = ctx.message.reply_to_message?.from?.id;
-  if (!userToBan) return ctx.reply("⚠️ Reply to a user’s message to ban them.");
+    const userToBan = ctx.message.reply_to_message?.from?.id;
+    if (!userToBan) return ctx.reply("⚠️ Reply to a user’s message to ban them.");
 
-  ctx.banChatMember(userToBan);
-  ctx.reply(`🚫 User ${userToBan} has been banned.`);
+    await ctx.banChatMember(userToBan, { until_date: 0 });
+    await ctx.reply(`🚫 User ${userToBan} has been banned.`);
+  } catch (error) {
+    console.error("Error banning user:", error);
+  }
 });
 
-bot.command("mute", (ctx) => {
-  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can mute users!");
+bot.command("mute", async (ctx) => {
+  try {
+    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can mute users!");
 
-  const userToMute = ctx.message.reply_to_message?.from?.id;
-  if (!userToMute) return ctx.reply("⚠️ Reply to a user’s message to mute them.");
+    const userToMute = ctx.message.reply_to_message?.from?.id;
+    if (!userToMute) return ctx.reply("⚠️ Reply to a user’s message to mute them.");
 
-  ctx.restrictChatMember(userToMute, { can_send_messages: false });
-  ctx.reply(`🔇 User ${userToMute} has been muted.`);
+    await ctx.restrictChatMember(userToMute, { permissions: { can_send_messages: false } });
+    await ctx.reply(`🔇 User ${userToMute} has been muted.`);
+  } catch (error) {
+    console.error("Error muting user:", error);
+  }
 });
 
-bot.command("unmute", (ctx) => {
-  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unmute users!");
+bot.command("unmute", async (ctx) => {
+  try {
+    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unmute users!");
 
-  const userToUnmute = ctx.message.reply_to_message?.from?.id;
-  if (!userToUnmute) return ctx.reply("⚠️ Reply to a user’s message to unmute them.");
+    const userToUnmute = ctx.message.reply_to_message?.from?.id;
+    if (!userToUnmute) return ctx.reply("⚠️ Reply to a user’s message to unmute them.");
 
-  ctx.restrictChatMember(userToUnmute, { can_send_messages: true });
-  ctx.reply(`🔊 User ${userToUnmute} has been unmuted.`);
+    await ctx.restrictChatMember(userToUnmute, { permissions: { can_send_messages: true } });
+    await ctx.reply(`🔊 User ${userToUnmute} has been unmuted.`);
+  } catch (error) {
+    console.error("Error unmuting user:", error);
+  }
 });
 
-// Start Bot
-bot.launch();
-console.log("🤖 Telegram Bot is running...");
+// Start Bot with Error Handling
+bot.launch().then(() => {
+  console.log("🤖 Telegram Bot is running...");
+}).catch((err) => {
+  console.error("Error starting bot:", err);
+});
