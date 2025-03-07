@@ -7,15 +7,17 @@ const admins = [5303351099]; // Replace with actual admin IDs
 const bannedUsers = new Set();
 const mutedUsers = new Set();
 const messageHistory = new Map(); // Store message IDs for clearing later
-const users = new Map(); 
-// ✅ Handle Messages (Prevent Banned Users from Sending)
-bot.on("text", async (ctx) => {
+const users = new Map(); // Stores user IDs and usernames
+
+// ✅ Track users when they send messages
+bot.on("message", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
 
     if (!users.has(userId)) {
-      users.set(userId, username); // Store user in map
+      users.set(userId, username);
+      console.log(`User added: ${username} (${userId})`); // Debug log
     }
 
     if (bannedUsers.has(userId)) {
@@ -27,7 +29,7 @@ bot.on("text", async (ctx) => {
       return;
     }
 
-    const message = ctx.message.text.toLowerCase();
+    const message = ctx.message.text?.toLowerCase() || "";
 
     if (message.includes("spam")) {
       await ctx.deleteMessage();
@@ -43,8 +45,24 @@ bot.on("text", async (ctx) => {
   }
 });
 
+// ✅ Track users when they join the group
+bot.on("new_chat_members", async (ctx) => {
+  try {
+    ctx.message.new_chat_members.forEach((member) => {
+      const userId = member.id;
+      const username = member.username || member.first_name;
 
-// ✅ Simulated Ban Command
+      if (!users.has(userId)) {
+        users.set(userId, username);
+        console.log(`User joined: ${username} (${userId})`); // Debug log
+      }
+    });
+  } catch (error) {
+    console.error("Error handling new member:", error);
+  }
+});
+
+// ✅ Ban Command
 bot.command("ban", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
 
@@ -55,7 +73,7 @@ bot.command("ban", async (ctx) => {
   return ctx.reply(`🚫 User [${userToBan}](tg://user?id=${userToBan}) is now banned (simulated).`, { parse_mode: "Markdown" });
 });
 
-// ✅ Simulated Unban Command
+// ✅ Unban Command
 bot.command("unban", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unban users!");
 
@@ -66,7 +84,7 @@ bot.command("unban", async (ctx) => {
   return ctx.reply(`✅ User [${userToUnban}](tg://user?id=${userToUnban}) has been unbanned.`, { parse_mode: "Markdown" });
 });
 
-// ✅ Simulated Mute Command
+// ✅ Mute Command
 bot.command("mute", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can mute users!");
 
@@ -77,7 +95,7 @@ bot.command("mute", async (ctx) => {
   return ctx.reply(`🔇 User [${userToMute}](tg://user?id=${userToMute}) is now muted (simulated).`, { parse_mode: "Markdown" });
 });
 
-// ✅ Simulated Unmute Command
+// ✅ Unmute Command
 bot.command("unmute", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unmute users!");
 
@@ -87,9 +105,12 @@ bot.command("unmute", async (ctx) => {
   mutedUsers.delete(userToUnmute);
   return ctx.reply(`🔊 User [${userToUnmute}](tg://user?id=${userToUnmute}) has been unmuted.`, { parse_mode: "Markdown" });
 });
-// Fetch user list when `/list` command is used
+
+// ✅ List Users Command
 bot.command("list", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view the user list!");
+
+  console.log("User Map:", users); // Debugging log
 
   let response = "📜 **Group Members:**\n\n";
 
@@ -104,7 +125,7 @@ bot.command("list", async (ctx) => {
   return ctx.reply(response, { parse_mode: "Markdown" });
 });
 
-// ✅ Clear Chat Command for Admins
+// ✅ Clear Chat Command
 bot.command("clear", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
 
