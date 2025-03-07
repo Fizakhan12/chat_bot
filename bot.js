@@ -29,20 +29,32 @@ bot.on("text", async (ctx) => {
   }
 });
 
-// Admin Commands
 bot.command("ban", async (ctx) => {
   try {
-    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
+    // Check if the user issuing the command is an admin
+    if (!admins.includes(ctx.from.id)) {
+      return ctx.reply("❌ Only admins can ban users!");
+    }
 
-    const userToBan = ctx.message.reply_to_message?.from?.id;
-    if (!userToBan) return ctx.reply("⚠️ Reply to a user’s message to ban them.");
+    // Ensure the command is used in reply to a message
+    if (!ctx.message.reply_to_message) {
+      return ctx.reply("⚠️ Reply to a user’s message to ban them.");
+    }
 
-    await ctx.banChatMember(userToBan);
+    const userToBan = ctx.message.reply_to_message.from.id;
+
+    // Attempt to ban the user
+    await ctx.telegram.banChatMember(ctx.chat.id, userToBan);
+
+    // Confirmation message
     await ctx.reply(`🚫 User ${userToBan} has been banned.`);
+
   } catch (error) {
     console.error("Error banning user:", error);
+    ctx.reply("❌ An error occurred while trying to ban the user.");
   }
 });
+
 
 bot.command("mute", async (ctx) => {
   try {
