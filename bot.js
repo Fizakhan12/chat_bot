@@ -31,30 +31,19 @@ bot.on("text", async (ctx) => {
 
 bot.command("ban", async (ctx) => {
   try {
-    // Check if the user issuing the command is an admin
-    if (!admins.includes(ctx.from.id)) {
-      return ctx.reply("❌ Only admins can ban users!");
-    }
+    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
 
-    // Ensure the command is used in reply to a message
-    if (!ctx.message.reply_to_message) {
-      return ctx.reply("⚠️ Reply to a user’s message to ban them.");
-    }
+    if (!ctx.message.reply_to_message) return ctx.reply("⚠️ Reply to a user’s message to ban them.");
 
     const userToBan = ctx.message.reply_to_message.from.id;
 
-    // Attempt to ban the user
     await ctx.telegram.banChatMember(ctx.chat.id, userToBan);
-
-    // Confirmation message
     await ctx.reply(`🚫 User ${userToBan} has been banned.`);
-
   } catch (error) {
     console.error("Error banning user:", error);
     ctx.reply("❌ An error occurred while trying to ban the user.");
   }
 });
-
 
 bot.command("mute", async (ctx) => {
   try {
@@ -63,7 +52,10 @@ bot.command("mute", async (ctx) => {
     const userToMute = ctx.message.reply_to_message?.from?.id;
     if (!userToMute) return ctx.reply("⚠️ Reply to a user’s message to mute them.");
 
-    await ctx.restrictChatMember(userToMute, { permissions: { can_send_messages: false } });
+    await ctx.telegram.restrictChatMember(ctx.chat.id, userToMute, {
+      permissions: { can_send_messages: false },
+    });
+
     await ctx.reply(`🔇 User ${userToMute} has been muted.`);
   } catch (error) {
     console.error("Error muting user:", error);
@@ -77,10 +69,38 @@ bot.command("unmute", async (ctx) => {
     const userToUnmute = ctx.message.reply_to_message?.from?.id;
     if (!userToUnmute) return ctx.reply("⚠️ Reply to a user’s message to unmute them.");
 
-    await ctx.restrictChatMember(userToUnmute, { permissions: { can_send_messages: true } });
+    await ctx.telegram.restrictChatMember(ctx.chat.id, userToUnmute, {
+      permissions: { can_send_messages: true },
+    });
+
     await ctx.reply(`🔊 User ${userToUnmute} has been unmuted.`);
   } catch (error) {
     console.error("Error unmuting user:", error);
+  }
+});
+
+// Clear Chat Command for Admins
+bot.command("clear", async (ctx) => {
+  try {
+    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
+
+    const chatId = ctx.chat.id;
+    const messageCount = 50; // Number of messages to delete (adjust as needed)
+
+    const messages = await ctx.telegram.getChatHistory(chatId, { limit: messageCount });
+
+    for (const message of messages) {
+      try {
+        await ctx.telegram.deleteMessage(chatId, message.message_id);
+      } catch (err) {
+        console.error("Error deleting message:", err);
+      }
+    }
+
+    await ctx.reply("🗑️ Chat history cleared.");
+  } catch (error) {
+    console.error("Error clearing chat:", error);
+    ctx.reply("❌ An error occurred while clearing the chat.");
   }
 });
 
