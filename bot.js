@@ -1,10 +1,24 @@
 const { Telegraf } = require("telegraf");
+const fs = require("fs");
 require("dotenv").config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
-const users = new Map(); // Stores user ID and username
+const usersFile = "users.json";
+
+// ✅ Load users from file on startup
+let users = new Map();
+if (fs.existsSync(usersFile)) {
+  const rawData = fs.readFileSync(usersFile);
+  const savedUsers = JSON.parse(rawData);
+  users = new Map(savedUsers);
+}
+
+// ✅ Function to save users to a file
+const saveUsersToFile = () => {
+  fs.writeFileSync(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
+};
 
 // ✅ Track users when they send messages
 bot.on("message", async (ctx) => {
@@ -14,6 +28,7 @@ bot.on("message", async (ctx) => {
 
     if (!users.has(userId)) {
       users.set(userId, username);
+      saveUsersToFile();
       console.log(`User added: ${username} (${userId})`); // Debug log
     }
   } catch (error) {
@@ -30,6 +45,7 @@ bot.on("new_chat_members", async (ctx) => {
 
       if (!users.has(userId)) {
         users.set(userId, username);
+        saveUsersToFile();
         console.log(`User joined: ${username} (${userId})`); // Debug log
       }
     });
@@ -38,7 +54,7 @@ bot.on("new_chat_members", async (ctx) => {
   }
 });
 
-// ✅ List Users Command (Improved Debugging)
+// ✅ List Users Command (Now Reads from Saved File)
 bot.command("list", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view the user list!");
 
