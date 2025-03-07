@@ -82,7 +82,31 @@ bot.command("unmute", async (ctx) => {
   mutedUsers.delete(userToUnmute);
   return ctx.reply(`🔊 User [${userToUnmute}](tg://user?id=${userToUnmute}) has been unmuted.`, { parse_mode: "Markdown" });
 });
+bot.command("list", async (ctx) => {
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view the user list!");
 
+  let response = "📜 **User List:**\n\n";
+
+  if (bannedUsers.size > 0) {
+    response += "🚫 **Banned Users:**\n";
+    bannedUsers.forEach((user) => {
+      response += `- [${user}](tg://user?id=${user})\n`;
+    });
+  } else {
+    response += "✅ No banned users.\n";
+  }
+
+  if (mutedUsers.size > 0) {
+    response += "\n🔇 **Muted Users:**\n";
+    mutedUsers.forEach((user) => {
+      response += `- [${user}](tg://user?id=${user})\n`;
+    });
+  } else {
+    response += "\n✅ No muted users.\n";
+  }
+
+  return ctx.reply(response, { parse_mode: "Markdown" });
+});
 // ✅ Clear Chat Command for Admins
 bot.command("clear", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
