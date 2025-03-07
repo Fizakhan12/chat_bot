@@ -89,27 +89,23 @@ bot.command("unmute", async (ctx) => {
 // Clear Chat Command for Admins
 bot.command("clear", async (ctx) => {
   try {
-    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
+    // Fetch recent messages (limit 100)
+    const messages = await ctx.telegram.getChatHistory(ctx.chat.id, {
+      limit: 100,
+    });
 
-    const chatId = ctx.chat.id;
-    const messages = messageHistory.get(chatId) || [];
-
-    if (messages.length === 0) return ctx.reply("⚠️ No messages to delete!");
-
-    for (const msgId of messages) {
-      try {
-        await ctx.telegram.deleteMessage(chatId, msgId);
-      } catch (err) {
-        console.error("Error deleting message:", err);
-      }
+    // Loop through messages and delete them
+    for (const msg of messages) {
+      await ctx.telegram.deleteMessage(ctx.chat.id, msg.message_id);
     }
 
-    messageHistory.set(chatId, []); // Clear stored messages
-    await ctx.reply("🗑️ Chat history cleared.");
+    await ctx.reply("✅ Chat cleared successfully.");
   } catch (error) {
     console.error("Error clearing chat:", error);
+    await ctx.reply("❌ Failed to clear chat. Make sure I have delete permissions.");
   }
 });
+
 
 
 
