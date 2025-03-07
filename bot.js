@@ -7,19 +7,24 @@ const admins = [5303351099]; // Replace with actual admin IDs
 const bannedUsers = new Set();
 const mutedUsers = new Set();
 const messageHistory = new Map(); // Store message IDs for clearing later
-
+const users = new Map(); 
 // ✅ Handle Messages (Prevent Banned Users from Sending)
 bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.id;
+    const username = ctx.from.username || ctx.from.first_name;
+
+    if (!users.has(userId)) {
+      users.set(userId, username); // Store user in map
+    }
 
     if (bannedUsers.has(userId)) {
-      await ctx.deleteMessage(); // Delete message immediately
+      await ctx.deleteMessage();
       return;
     }
 
     if (mutedUsers.has(userId)) {
-      return; // Ignore messages from muted users
+      return;
     }
 
     const message = ctx.message.text.toLowerCase();
@@ -29,7 +34,6 @@ bot.on("text", async (ctx) => {
       return ctx.reply("❌ Spam detected! Message removed.");
     }
 
-    // Store messages for clearing
     if (!messageHistory.has(ctx.chat.id)) {
       messageHistory.set(ctx.chat.id, []);
     }
@@ -38,6 +42,7 @@ bot.on("text", async (ctx) => {
     console.error("Error handling message:", error);
   }
 });
+
 
 // ✅ Simulated Ban Command
 bot.command("ban", async (ctx) => {
@@ -98,6 +103,7 @@ bot.command("list", async (ctx) => {
 
   return ctx.reply(response, { parse_mode: "Markdown" });
 });
+
 // ✅ Clear Chat Command for Admins
 bot.command("clear", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
