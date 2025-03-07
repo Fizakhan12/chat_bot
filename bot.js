@@ -86,21 +86,16 @@ bot.command("clear", async (ctx) => {
     if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
 
     const chatId = ctx.chat.id;
-    const messagesToDelete = messageHistory.get(chatId) || [];
+    let messageId = ctx.message.message_id;
 
-    if (messagesToDelete.length === 0) {
-      return ctx.reply("⚠️ No messages to delete.");
-    }
-
-    for (const messageId of messagesToDelete) {
+    for (let i = 0; i < 10; i++) { // Deletes 10 messages, increase if needed
       try {
-        await ctx.telegram.deleteMessage(chatId, messageId);
+        await ctx.telegram.deleteMessage(chatId, messageId - i);
       } catch (err) {
         console.error("Error deleting message:", err);
       }
     }
 
-    messageHistory.set(chatId, []); // Clear stored messages after deletion
     await ctx.reply("🗑️ Chat history cleared.");
   } catch (error) {
     console.error("Error clearing chat:", error);
