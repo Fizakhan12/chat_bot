@@ -1,4 +1,3 @@
-
 const { Telegraf } = require("telegraf");
 
 require("dotenv").config();
@@ -9,6 +8,10 @@ const admins = [5303351099]; // Replace with actual admin IDs
 bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.id;
+    const botId = (await bot.telegram.getMe()).id; // Get bot's own ID
+
+    if (userId === botId) return; // Ignore bot's own messages
+
     const message = ctx.message.text;
 
     if (message.toLowerCase().includes("spam")) {
@@ -32,7 +35,7 @@ bot.command("ban", async (ctx) => {
     const userToBan = ctx.message.reply_to_message?.from?.id;
     if (!userToBan) return ctx.reply("⚠️ Reply to a user’s message to ban them.");
 
-    await ctx.banChatMember(userToBan, { until_date: 0 });
+    await ctx.banChatMember(userToBan);
     await ctx.reply(`🚫 User ${userToBan} has been banned.`);
   } catch (error) {
     console.error("Error banning user:", error);
