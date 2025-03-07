@@ -4,15 +4,23 @@ require("dotenv").config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
+const bannedUsers = new Set();
+const mutedUsers = new Set();
 const messageHistory = new Map(); // Store message IDs for clearing later
 
-// Handle Messages (Without AI Reply)
+// ✅ Handle Messages (Prevent Banned Users from Sending)
 bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.id;
-    const botId = (await bot.telegram.getMe()).id;
 
-    if (userId === botId) return; // Ignore bot's own messages
+    if (bannedUsers.has(userId)) {
+      await ctx.deleteMessage(); // Delete message immediately
+      return;
+    }
+
+    if (mutedUsers.has(userId)) {
+      return; // Ignore messages from muted users
+    }
 
     const message = ctx.message.text.toLowerCase();
 
@@ -26,15 +34,12 @@ bot.on("text", async (ctx) => {
       messageHistory.set(ctx.chat.id, []);
     }
     messageHistory.get(ctx.chat.id).push(ctx.message.message_id);
-
   } catch (error) {
     console.error("Error handling message:", error);
   }
 });
 
-// Ban User
-const bannedUsers = new Set();
-
+// ✅ Simulated Ban Command
 bot.command("ban", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
 
@@ -45,17 +50,18 @@ bot.command("ban", async (ctx) => {
   return ctx.reply(`🚫 User [${userToBan}](tg://user?id=${userToBan}) is now banned (simulated).`, { parse_mode: "Markdown" });
 });
 
-bot.on("text", async (ctx) => {
-  if (bannedUsers.has(ctx.from.id)) {
-    return ctx.reply("❌ You are banned! (Simulation)");
-  }
+// ✅ Simulated Unban Command
+bot.command("unban", async (ctx) => {
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unban users!");
+
+  const userToUnban = ctx.message.reply_to_message?.from?.id;
+  if (!userToUnban) return ctx.reply("⚠️ Reply to a user's message to unban them.");
+
+  bannedUsers.delete(userToUnban);
+  return ctx.reply(`✅ User [${userToUnban}](tg://user?id=${userToUnban}) has been unbanned.`, { parse_mode: "Markdown" });
 });
 
-
-
-// Mute User
-const mutedUsers = new Set();
-
+// ✅ Simulated Mute Command
 bot.command("mute", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can mute users!");
 
@@ -66,45 +72,30 @@ bot.command("mute", async (ctx) => {
   return ctx.reply(`🔇 User [${userToMute}](tg://user?id=${userToMute}) is now muted (simulated).`, { parse_mode: "Markdown" });
 });
 
-bot.on("text", async (ctx) => {
-  if (mutedUsers.has(ctx.from.id)) {
-    return; // Ignore their messages instead of muting (since real mute only works in supergroups)
-  }
-});
-
-
-
-// Unmute User
+// ✅ Simulated Unmute Command
 bot.command("unmute", async (ctx) => {
-  try {
-    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unmute users!");
-    const userToUnmute = ctx.message.reply_to_message?.from?.id;
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can unmute users!");
 
-    if (!userToUnmute) return ctx.reply("⚠️ Reply to a user’s message to unmute them.");
+  const userToUnmute = ctx.message.reply_to_message?.from?.id;
+  if (!userToUnmute) return ctx.reply("⚠️ Reply to a user's message to unmute them.");
 
-    await ctx.telegram.restrictChatMember(ctx.chat.id, userToUnmute, {
-      permissions: { can_send_messages: true, can_send_media_messages: true },
-    });
-
-    await ctx.reply(`🔊 User [${userToUnmute}](tg://user?id=${userToUnmute}) has been unmuted.`, { parse_mode: "Markdown" });
-  } catch (error) {
-    console.error("Error unmuting user:", error);
-  }
+  mutedUsers.delete(userToUnmute);
+  return ctx.reply(`🔊 User [${userToUnmute}](tg://user?id=${userToUnmute}) has been unmuted.`, { parse_mode: "Markdown" });
 });
 
-// Clear Chat Command for Admins
+// ✅ Clear Chat Command for Admins
 bot.command("clear", async (ctx) => {
-  try {
-    // Fetch recent messages (limit 100)
-    const messages = await ctx.telegram.getChatHistory(ctx.chat.id, {
-      limit: 100,
-    });
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can clear chat!");
 
-    // Loop through messages and delete them
-    for (const msg of messages) {
-      await ctx.telegram.deleteMessage(ctx.chat.id, msg.message_id);
+  try {
+    if (!messageHistory.has(ctx.chat.id)) return ctx.reply("⚠️ No messages to clear.");
+
+    const messagesToDelete = messageHistory.get(ctx.chat.id);
+    for (const msgId of messagesToDelete) {
+      await ctx.telegram.deleteMessage(ctx.chat.id, msgId);
     }
 
+    messageHistory.set(ctx.chat.id, []);
     await ctx.reply("✅ Chat cleared successfully.");
   } catch (error) {
     console.error("Error clearing chat:", error);
@@ -112,10 +103,7 @@ bot.command("clear", async (ctx) => {
   }
 });
 
-
-
-
-// Start Bot
+// ✅ Start Bot
 bot.launch()
   .then(() => console.log("🤖 Telegram Bot is running..."))
   .catch((err) => console.error("Error starting bot:", err));
