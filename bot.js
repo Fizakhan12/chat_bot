@@ -1,6 +1,6 @@
 const { Telegraf } = require("telegraf");
-
 require("dotenv").config();
+
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
@@ -12,16 +12,18 @@ bot.on("text", async (ctx) => {
 
     if (userId === botId) return; // Ignore bot's own messages
 
-    const message = ctx.message.text;
+    const message = ctx.message.text.toLowerCase();
 
-    if (message.toLowerCase().includes("spam")) {
+    if (message.includes("spam")) {
       await ctx.deleteMessage();
       return ctx.reply("❌ Spam detected! Message removed.");
     }
 
-    // AI Response (Replace with actual API logic)
-    const response = `🤖 AI says: "${message}"`;
-    await ctx.reply(response);
+    // Prevent repeating user messages, add a generic AI response instead
+    if (!message.includes("ban") && !message.includes("mute")) {
+      await ctx.reply("🤖 AI is here! How can I assist you?");
+    }
+
   } catch (error) {
     console.error("Error handling message:", error);
   }
@@ -71,8 +73,6 @@ bot.command("unmute", async (ctx) => {
 });
 
 // Start Bot with Error Handling
-bot.launch().then(() => {
-  console.log("🤖 Telegram Bot is running...");
-}).catch((err) => {
-  console.error("Error starting bot:", err);
-});
+bot.launch()
+  .then(() => console.log("🤖 Telegram Bot is running..."))
+  .catch((err) => console.error("Error starting bot:", err));
