@@ -33,39 +33,45 @@ bot.on("text", async (ctx) => {
 });
 
 // Ban User
+const bannedUsers = new Set();
+
 bot.command("ban", async (ctx) => {
-  try {
-    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
-    const userToBan = ctx.message.reply_to_message?.from?.id;
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can ban users!");
 
-    if (!userToBan) return ctx.reply("⚠️ Reply to a user’s message to ban them.");
+  const userToBan = ctx.message.reply_to_message?.from?.id;
+  if (!userToBan) return ctx.reply("⚠️ Reply to a user's message to ban them.");
 
-    await ctx.telegram.banChatMember(ctx.chat.id, userToBan);
-    await ctx.reply(`🚫 User [${userToBan}](tg://user?id=${userToBan}) has been banned.`, { parse_mode: "Markdown" });
-  } catch (error) {
-    console.error("Error banning user:", error);
+  bannedUsers.add(userToBan);
+  return ctx.reply(`🚫 User [${userToBan}](tg://user?id=${userToBan}) is now banned (simulated).`, { parse_mode: "Markdown" });
+});
+
+bot.on("text", async (ctx) => {
+  if (bannedUsers.has(ctx.from.id)) {
+    return ctx.reply("❌ You are banned! (Simulation)");
   }
 });
+
 
 
 // Mute User
+const mutedUsers = new Set();
+
 bot.command("mute", async (ctx) => {
-  try {
-    if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can mute users!");
-    const userToMute = ctx.message.reply_to_message?.from?.id;
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can mute users!");
 
-    if (!userToMute) return ctx.reply("⚠️ Reply to a user’s message to mute them.");
+  const userToMute = ctx.message.reply_to_message?.from?.id;
+  if (!userToMute) return ctx.reply("⚠️ Reply to a user's message to mute them.");
 
-    await ctx.telegram.restrictChatMember(ctx.chat.id, userToMute, {
-      permissions: { can_send_messages: false, can_send_media_messages: false },
-      until_date: Math.floor(Date.now() / 1000) + 3600, // Mutes for 1 hour
-    });
+  mutedUsers.add(userToMute);
+  return ctx.reply(`🔇 User [${userToMute}](tg://user?id=${userToMute}) is now muted (simulated).`, { parse_mode: "Markdown" });
+});
 
-    await ctx.reply(`🔇 User [${userToMute}](tg://user?id=${userToMute}) has been muted for 1 hour.`, { parse_mode: "Markdown" });
-  } catch (error) {
-    console.error("Error muting user:", error);
+bot.on("text", async (ctx) => {
+  if (mutedUsers.has(ctx.from.id)) {
+    return; // Ignore their messages instead of muting (since real mute only works in supergroups)
   }
 });
+
 
 
 // Unmute User
