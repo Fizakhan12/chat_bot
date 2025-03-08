@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
+let ownerId = null; // ✅ Store owner ID dynamically
 
 let links = [];
 let users = [];
@@ -23,27 +24,44 @@ try {
   console.error("⚠️ Error loading users.json:", error);
 }
 
-// ✅ Admin Command: Start Counting (on /start)
+// ✅ Function to check if the user is an admin or owner
+const isAuthorized = async (ctx) => {
+  try {
+    const chatAdmins = await ctx.getChatAdministrators();
+    const user = chatAdmins.find((admin) => admin.user.id === ctx.from.id);
+
+    if (user) {
+      if (user.status === "creator") {
+        ownerId = ctx.from.id; // ✅ Store the owner's ID dynamically
+      }
+      return true; // ✅ User is an admin or owner
+    }
+  } catch (error) {
+    console.error("❌ Error fetching chat administrators:", error);
+  }
+  return false; // ❌ User is not an admin or owner
+};
+
+// ✅ Admin/Owner Command: Start Counting (on /start)
 bot.command("start", async (ctx) => {
-  if (!admins.includes(ctx.from.id)) {
-    return ctx.reply("❌ Only admins can use this command!");
+  if (!(await isAuthorized(ctx))) {
+    return ctx.reply("❌ Only admins or the owner can use this command!");
   }
 
-  // ✅ Reset links and enable counting
   links = [];
   countingActive = true;
   fs.writeFileSync("links.json", JSON.stringify(links, null, 2));
 
-  ctx.reply(`📊 Link counting started!`);
+  ctx.reply("📊 Link counting started!");
 });
 
-// ✅ Admin Command: Stop Counting (on /close)
+// ✅ Admin/Owner Command: Stop Counting (on /close)
 bot.command("close", async (ctx) => {
-  if (!admins.includes(ctx.from.id)) {
-    return ctx.reply("❌ Only admins can use this command!");
+  if (!(await isAuthorized(ctx))) {
+    return ctx.reply("❌ Only admins or the owner can use this command!");
   }
 
-  countingActive = false; // ✅ Stop counting
+  countingActive = false;
   ctx.reply("⛔ Link counting has been stopped.");
 });
 
@@ -54,11 +72,11 @@ bot.command("total", async (ctx) => {
 
 // ✅ Track text messages for links
 bot.on("text", async (ctx) => {
-  if (!countingActive) return; // ✅ Ignore messages if counting is stopped
+  if (!countingActive) return;
 
   try {
     const messageText = ctx.message.text;
-    const urlRegex = /(https?:\/\/[^\s]+)/g; // Detects links
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
 
     const foundLinks = messageText.match(urlRegex);
     if (foundLinks) {
@@ -91,8 +109,8 @@ bot.on("new_chat_members", async (ctx) => {
 
 // ✅ List Users Command
 bot.command("list", async (ctx) => {
-  if (!admins.includes(ctx.from.id)) {
-    return ctx.reply("❌ Only admins can view the user list!");
+  if (!(await isAuthorized(ctx))) {
+    return ctx.reply("❌ Only admins or the owner can view the user list!");
   }
 
   if (users.length === 0) {
