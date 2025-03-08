@@ -19,9 +19,16 @@ bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
+    const messageText = ctx.message.text.toLowerCase(); // Convert to lowercase
 
-    console.log(`📩 Message received from ${username} (${userId})`);
+    console.log(`📩 Message received from ${username} (${userId}): ${messageText}`);
 
+    // ✅ Respond if the user types "fiza"
+    if (messageText.includes("fiza")) {
+      return ctx.reply("Hello Fiza, welcome here! 😊");
+    }
+
+    // ✅ Add user to list if not already added
     if (!users.some((u) => u.id === userId)) {
       users.push({ id: userId, username });
       fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
