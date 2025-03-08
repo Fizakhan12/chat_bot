@@ -5,58 +5,71 @@ require("dotenv").config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
-let linkUsers = []; // Array to store users who sent links
+let users = [];
 
-// ✅ Load link users from JSON file on startup
+// ✅ Load users from JSON file
 try {
-  linkUsers = JSON.parse(fs.readFileSync("link_users.json", "utf-8")) || [];
+  users = JSON.parse(fs.readFileSync("users.json", "utf-8")) || [];
 } catch (error) {
-  console.error("⚠️ Error loading link_users.json:", error);
+  console.error("⚠️ Error loading users.json:", error);
 }
 
-// ✅ Detect Messages Containing Links
-bot.on("message", async (ctx) => {
+// ✅ Track text messages
+bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
-    const messageText = ctx.message.text || "";
 
-    // Regular expression to detect links
-    const linkRegex = /(https?:\/\/[^\s]+)/g;
+    console.log(`📩 Message received from ${username} (${userId})`);
 
-    if (linkRegex.test(messageText)) {
-      console.log(`🔗 Link detected from ${username} (${userId})`);
-
-      if (!linkUsers.some((u) => u.id === userId)) {
-        linkUsers.push({ id: userId, username });
-        fs.writeFileSync("link_users.json", JSON.stringify(linkUsers, null, 2));
-        console.log(`✅ User added: ${username} (${userId})`);
-      }
+    if (!users.some((u) => u.id === userId)) {
+      users.push({ id: userId, username });
+      fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+      console.log(`✅ User added: ${username} (${userId})`);
     }
   } catch (error) {
     console.error("❌ Error handling message:", error);
   }
 });
 
-// ✅ Command to List Users Who Sent Links
-bot.command("list_links", async (ctx) => {
-  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view this list!");
+// ✅ Track when users join the group
+bot.on("new_chat_members", async (ctx) => {
+  try {
+    ctx.message.new_chat_members.forEach((member) => {
+      const userId = member.id;
+      const username = member.username || member.first_name;
 
-  console.log("🛠 DEBUG: Users who sent links:", linkUsers);
+      if (!users.some((u) => u.id === userId)) {
+        users.push({ id: userId, username });
+        fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+        console.log(`✅ User joined: ${username} (${userId})`);
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error handling new member:", error);
+  }
+});
 
-  if (linkUsers.length === 0) {
-    return ctx.reply("❌ No users have sent links yet.");
+// ✅ List Users Command
+bot.command("list", async (ctx) => {
+  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view the user list!");
+
+  console.log("🛠 DEBUG: Current users in list:", users);
+
+  if (users.length === 0) {
+    return ctx.reply("❌ No users recorded yet.");
   }
 
-  let response = "🔗 **Users Who Sent Links:**\n\n";
-  linkUsers.forEach((user) => {
+  let response = "📜 **Group Members:**\n\n";
+  users.forEach((user) => {
     response += `- [${user.username}](tg://user?id=${user.id})\n`;
   });
 
   return ctx.reply(response, { parse_mode: "MarkdownV2" });
 });
 
-// ✅ Start the Bot
+// ✅ Start Bot
 bot.launch()
   .then(() => console.log("🤖 Telegram Bot is running..."))
   .catch((err) => console.error("❌ Error starting bot:", err));
+
