@@ -20,18 +20,18 @@ bot.on("message", async (ctx) => {
     const userId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
 
+    console.log(`📩 Message received from ${username} (${userId})`);
+
     if (!users.some((u) => u.id === userId)) {
       users.push({ id: userId, username });
-      console.log(`User added: ${username} (${userId})`);
-
-      // Save users to JSON file
+      console.log(`✅ User added: ${username} (${userId})`);
       fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
-      console.log("✅ Users successfully saved to users.json!");
     }
   } catch (error) {
     console.error("❌ Error handling message:", error);
   }
 });
+
 
 // ✅ Track users when they join the group
 bot.on("new_chat_members", async (ctx) => {
