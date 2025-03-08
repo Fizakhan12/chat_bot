@@ -5,7 +5,15 @@ require("dotenv").config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
+let links = [];
 let users = [];
+
+// ✅ Load existing links from file
+try {
+  links = JSON.parse(fs.readFileSync("links.json", "utf-8")) || [];
+} catch (error) {
+  console.error("⚠️ Error loading links.json:", error);
+}
 
 // ✅ Load users from JSON file
 try {
@@ -14,25 +22,33 @@ try {
   console.error("⚠️ Error loading users.json:", error);
 }
 
-// ✅ Track text messages
+// ✅ Admin Command: Count Links (on /start)
+bot.command("start", async (ctx) => {
+  if (!admins.includes(ctx.from.id)) {
+    return ctx.reply("❌ Only admins can use this command!");
+  }
+
+  const linkCount = links.length;
+  // ctx.reply(`📊 Total links recorded: ${linkCount}`);
+});
+
+// ✅ User Command: Get Total Link Count (on /total)
+bot.command("total", async (ctx) => {
+  const linkCount = links.length;
+  ctx.reply(`📊 Total links recorded: ${linkCount}`);
+});
+
+// ✅ Track text messages for links
 bot.on("text", async (ctx) => {
   try {
-    const userId = ctx.from.id;
-    const username = ctx.from.username || ctx.from.first_name;
-    const messageText = ctx.message.text.toLowerCase(); // Convert to lowercase
+    const messageText = ctx.message.text;
+    const urlRegex = /(https?:\/\/[^\s]+)/g; // Detects links
 
-    console.log(`📩 Message received from ${username} (${userId}): ${messageText}`);
-
-    // ✅ Respond if the user types "fiza"
-    if (messageText.includes("fiza")) {
-      return ctx.reply("Hello Fiza, welcome here! 😊");
-    }
-
-    // ✅ Add user to list if not already added
-    if (!users.some((u) => u.id === userId)) {
-      users.push({ id: userId, username });
-      fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
-      console.log(`✅ User added: ${username} (${userId})`);
+    const foundLinks = messageText.match(urlRegex);
+    if (foundLinks) {
+      links.push(...foundLinks);
+      fs.writeFileSync("links.json", JSON.stringify(links, null, 2));
+      console.log(`🔗 Links added: ${foundLinks.length}`);
     }
   } catch (error) {
     console.error("❌ Error handling message:", error);
@@ -71,18 +87,18 @@ bot.command("list", async (ctx) => {
 
   let response = "📜 *Group Members:*\n\n";
   users.forEach((user) => {
-    const username = user.username.replace(/[_*[\]()~`>#+-=|{}.!]/g, "\\$&"); // Escape MarkdownV2 characters
-    response += `- [${username}](tg://user?id=${user.id})\n`;
+    response += `- [${user.username}](tg://user?id=${user.id})\n`;
   });
 
   return ctx.reply(response, { parse_mode: "MarkdownV2" });
 });
 
+// ✅ Test Command
 bot.command("test", async (ctx) => {
   ctx.reply("✅ Bot is working!");
 });
+
 // ✅ Start Bot
 bot.launch()
   .then(() => console.log("🤖 Telegram Bot is running..."))
   .catch((err) => console.error("❌ Error starting bot:", err));
-
