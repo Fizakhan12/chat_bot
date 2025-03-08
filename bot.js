@@ -52,7 +52,9 @@ bot.on("new_chat_members", async (ctx) => {
 
 // ✅ List Users Command
 bot.command("list", async (ctx) => {
-  if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view the user list!");
+  if (!admins.includes(ctx.from.id)) {
+    return ctx.reply("❌ Only admins can view the user list!");
+  }
 
   console.log("🛠 DEBUG: Current users in list:", users);
 
@@ -60,14 +62,18 @@ bot.command("list", async (ctx) => {
     return ctx.reply("❌ No users recorded yet.");
   }
 
-  let response = "📜 **Group Members:**\n\n";
+  let response = "📜 *Group Members:*\n\n";
   users.forEach((user) => {
-    response += `- [${user.username}](tg://user?id=${user.id})\n`;
+    const username = user.username.replace(/[_*[\]()~`>#+-=|{}.!]/g, "\\$&"); // Escape MarkdownV2 characters
+    response += `- [${username}](tg://user?id=${user.id})\n`;
   });
 
   return ctx.reply(response, { parse_mode: "MarkdownV2" });
 });
 
+bot.command("test", async (ctx) => {
+  ctx.reply("✅ Bot is working!");
+});
 // ✅ Start Bot
 bot.launch()
   .then(() => console.log("🤖 Telegram Bot is running..."))
