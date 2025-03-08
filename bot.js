@@ -56,14 +56,19 @@ bot.command("start", async (ctx) => {
 });
 
 // ✅ Admin/Owner Command: Stop Counting (on /close)
+// ✅ Admin/Owner Command: Stop Counting and Reset Links (on /close)
 bot.command("close", async (ctx) => {
   if (!(await isAuthorized(ctx))) {
     return ctx.reply("❌ Only admins or the owner can use this command!");
   }
 
-  countingActive = false;
-  ctx.reply("⛔ Link counting has been stopped.");
+  countingActive = false; // ✅ Stop counting
+  links = []; // ✅ Reset link count
+  fs.writeFileSync("links.json", JSON.stringify(links, null, 2)); // ✅ Update file
+
+  ctx.reply("⛔ Link counting has been stopped.\n📊 Total links count has been reset to 0.");
 });
+
 
 // ✅ User Command: Get Total Link Count (on /total)
 bot.command("total", async (ctx) => {
