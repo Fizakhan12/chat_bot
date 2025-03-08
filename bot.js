@@ -5,33 +5,14 @@ require("dotenv").config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 
-const usersFile = "users.json";
-let users = new Map();
+let users = []; // Use an array instead of Map
 
-// ✅ Load Users from File on Startup
-const loadUsersFromFile = () => {
-  try {
-    if (fs.existsSync(usersFile)) {
-      const data = fs.readFileSync(usersFile, "utf8");
-      if (data) {
-        users = new Map(JSON.parse(data));
-        console.log("✅ Users loaded from file:", users);
-      }
-    }
-  } catch (error) {
-    console.error("❌ Error loading users from file:", error);
-  }
-};
-
-// ✅ Save Users to File
-const saveUsersToFile = () => {
-  try {
-    fs.writeFileSync(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
-    console.log("✅ Users successfully saved to users.json!");
-  } catch (error) {
-    console.error("❌ Error saving users to file:", error);
-  }
-};
+// ✅ Load users from JSON file on startup
+try {
+  users = JSON.parse(fs.readFileSync("users.json", "utf-8")) || [];
+} catch (error) {
+  console.error("⚠️ Error loading users.json:", error);
+}
 
 // ✅ Track users when they send messages
 bot.on("message", async (ctx) => {
@@ -39,13 +20,14 @@ bot.on("message", async (ctx) => {
     const userId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
 
-    if (!users.has(userId)) {
-      users.set(userId, username);
-      console.log(`User added: ${username} (${userId})`); // Debug log
-      saveUsersToFile(); // Save to file
-    }
+    if (!users.some((u) => u.id === userId)) {
+      users.push({ id: userId, username });
+      console.log(`User added: ${username} (${userId})`);
 
-    console.log("🛠 DEBUG: Current users in Map:", users);
+      // Save users to JSON file
+      fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+      console.log("✅ Users successfully saved to users.json!");
+    }
   } catch (error) {
     console.error("❌ Error handling message:", error);
   }
@@ -58,14 +40,15 @@ bot.on("new_chat_members", async (ctx) => {
       const userId = member.id;
       const username = member.username || member.first_name;
 
-      if (!users.has(userId)) {
-        users.set(userId, username);
-        console.log(`User joined: ${username} (${userId})`); // Debug log
-        saveUsersToFile(); // Save to file
+      if (!users.some((u) => u.id === userId)) {
+        users.push({ id: userId, username });
+        console.log(`User joined: ${username} (${userId})`);
+
+        // Save users to JSON file
+        fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+        console.log("✅ Users successfully saved to users.json!");
       }
     });
-
-    console.log("🛠 DEBUG: Current users in Map:", users);
   } catch (error) {
     console.error("❌ Error handling new member:", error);
   }
@@ -75,24 +58,21 @@ bot.on("new_chat_members", async (ctx) => {
 bot.command("list", async (ctx) => {
   if (!admins.includes(ctx.from.id)) return ctx.reply("❌ Only admins can view the user list!");
 
-  console.log("🛠 DEBUG: users map content at /list command:", users);
+  console.log("🛠 DEBUG: Current users in list:", users);
 
-  if (users.size === 0) {
+  if (users.length === 0) {
     return ctx.reply("❌ No users recorded yet.");
   }
 
   let response = "📜 **Group Members:**\n\n";
-  users.forEach((username, userId) => {
-    response += `- [${username}](tg://user?id=${userId})\n`;
+  users.forEach((user) => {
+    response += `- [${user.username}](tg://user?id=${user.id})\n`;
   });
 
-  return ctx.reply(response, { parse_mode: "Markdown" });
+  return ctx.reply(response, { parse_mode: "MarkdownV2" });
 });
 
 // ✅ Start Bot
 bot.launch()
-  .then(() => {
-    console.log("🤖 Telegram Bot is running...");
-    loadUsersFromFile(); // Load users when the bot starts
-  })
+  .then(() => console.log("🤖 Telegram Bot is running..."))
   .catch((err) => console.error("❌ Error starting bot:", err));
