@@ -34,9 +34,20 @@ bot.command("start", async (ctx) => {
 
 // ✅ User Command: Get Total Link Count (on /total)
 bot.command("total", async (ctx) => {
-  const linkCount = links.length;
-  ctx.reply(`📊 Total links recorded: ${linkCount}`);
+  if (links.length === 0) {
+    return ctx.reply("❌ No links have been recorded yet.");
+  }
+
+  let response = `📊 *Total Links Recorded:* ${links.length}\n\n`;
+  
+  // Display all links in a numbered list
+  links.forEach((link, index) => {
+    response += `${index + 1}. ${link}\n`;
+  });
+
+  return ctx.reply(response, { parse_mode: "Markdown" });
 });
+
 
 // ✅ Track text messages for links
 bot.on("text", async (ctx) => {
