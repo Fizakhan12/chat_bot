@@ -7,6 +7,7 @@ const admins = [5303351099]; // Replace with actual admin IDs
 
 let links = [];
 let users = [];
+let countingActive = true; // ✅ Flag to enable/disable counting
 
 // ✅ Load existing links from file
 try {
@@ -22,29 +23,39 @@ try {
   console.error("⚠️ Error loading users.json:", error);
 }
 
-// ✅ Admin Command: Count Links (on /start)
+// ✅ Admin Command: Start Counting (on /start)
 bot.command("start", async (ctx) => {
   if (!admins.includes(ctx.from.id)) {
     return ctx.reply("❌ Only admins can use this command!");
   }
 
-  // Clear the existing links
+  // ✅ Reset links and enable counting
   links = [];
+  countingActive = true;
   fs.writeFileSync("links.json", JSON.stringify(links, null, 2));
 
-  const linkCount = links.length;
-  ctx.reply(`📊 Total links recorded: ${linkCount}`);
+  ctx.reply(`📊 Link counting started!`);
+});
+
+// ✅ Admin Command: Stop Counting (on /close)
+bot.command("close", async (ctx) => {
+  if (!admins.includes(ctx.from.id)) {
+    return ctx.reply("❌ Only admins can use this command!");
+  }
+
+  countingActive = false; // ✅ Stop counting
+  ctx.reply("⛔ Link counting has been stopped.");
 });
 
 // ✅ User Command: Get Total Link Count (on /total)
 bot.command("total", async (ctx) => {
-  const linkCount = links.length;
-  ctx.reply(`📊 Total links recorded: ${linkCount}`);
+  ctx.reply(`📊 Total links recorded: ${links.length}`);
 });
-
 
 // ✅ Track text messages for links
 bot.on("text", async (ctx) => {
+  if (!countingActive) return; // ✅ Ignore messages if counting is stopped
+
   try {
     const messageText = ctx.message.text;
     const urlRegex = /(https?:\/\/[^\s]+)/g; // Detects links
@@ -83,8 +94,6 @@ bot.command("list", async (ctx) => {
   if (!admins.includes(ctx.from.id)) {
     return ctx.reply("❌ Only admins can view the user list!");
   }
-
-  console.log("🛠 DEBUG: Current users in list:", users);
 
   if (users.length === 0) {
     return ctx.reply("❌ No users recorded yet.");
