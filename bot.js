@@ -1,29 +1,12 @@
 const { Telegraf } = require("telegraf");
 const fs = require("fs");
-const linksFile = "links.json";
-
 require("dotenv").config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 let ownerId = null; // ✅ Store owner ID dynamically
 
-if (fs.existsSync(linksFile)) {
-  try {
-    const data = fs.readFileSync(linksFile, "utf8").trim();
-    links = data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error("❌ Error reading links.json:", error);
-    links = []; // Reset to empty array if JSON is invalid
-  }
-} else {
-  fs.writeFileSync(linksFile, "[]"); // Create file if it doesn't exist
-}
-
-// Function to save links
-function saveLinks() {
-  fs.writeFileSync(linksFile, JSON.stringify(links, null, 2));
-}
+let links = [];
 let users = [];
 let countingActive = true; // ✅ Flag to enable/disable counting
 
@@ -89,34 +72,7 @@ bot.command("close", async (ctx) => {
 
 // ✅ User Command: Get Total Link Count (on /total)
 bot.command("total", async (ctx) => {
-  const totalCount = links.reduce((sum, entry) => sum + (entry.count || 1), 0);
-  ctx.reply(`📊 Total links recorded: ${totalCount}`);
-});
-
-bot.on("message", async (ctx) => {
-  const messageText = ctx.message.text;
-  const userId = ctx.from.id;
-  const username = ctx.from.username || "Unknown";
-
-  const linkRegex = /(https?:\/\/[^\s]+)/g;
-  const foundLinks = messageText.match(linkRegex);
-
-  if (foundLinks) {
-    foundLinks.forEach((link) => {
-      // Find if the link already exists in the array
-      let existingEntry = links.find(
-        (entry) => entry.userId === userId && entry.link === link
-      );
-
-      if (existingEntry) {
-        existingEntry.count += 1; // ✅ Increment count
-      } else {
-        links.push({ userId, username, link, count: 1 }); // ✅ Initialize count
-      }
-    });
-
-    saveLinks();
-  }
+  ctx.reply(`📊 Total links recorded: ${links.length}`);
 });
 
 // ✅ Track text messages for links
@@ -155,38 +111,6 @@ bot.on("new_chat_members", async (ctx) => {
     console.error("❌ Error handling new member:", error);
   }
 });
-bot.command("doublelinks", async (ctx) => {
-  if (links.length === 0) {
-    return ctx.reply("📊 No links recorded yet.");
-  }
-
-  const linkCountMap = new Map();
-
-  links.forEach(({ userId, username, link, count }) => {
-    const key = `${userId}-${link}`;
-    if (linkCountMap.has(key)) {
-      linkCountMap.get(key).count += count; // Increment count
-    } else {
-      linkCountMap.set(key, { username, count });
-    }
-  });
-
-  const duplicates = [...linkCountMap.values()].filter(entry => entry.count > 1);
-
-  if (duplicates.length === 0) {
-    return ctx.reply("✅ No users have shared duplicate links.");
-  }
-
-  let response = "📌 *Users with Duplicate Links:*\n\n";
-  duplicates.forEach((entry, index) => {
-    response += `${index + 1}. ${entry.username} - ${entry.count} times\n`;
-  });
-
-  ctx.reply(response, { parse_mode: "Markdown" });
-});
-
-
-
 
 // ✅ List Users Command
 bot.command("list", async (ctx) => {
