@@ -8,11 +8,16 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 const admins = [5303351099]; // Replace with actual admin IDs
 let ownerId = null; // ✅ Store owner ID dynamically
 
-let links = [];
-
-// Load existing data
 if (fs.existsSync(linksFile)) {
-  links = JSON.parse(fs.readFileSync(linksFile, "utf8"));
+  try {
+    const data = fs.readFileSync(linksFile, "utf8").trim();
+    links = data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("❌ Error reading links.json:", error);
+    links = []; // Reset to empty array if JSON is invalid
+  }
+} else {
+  fs.writeFileSync(linksFile, "[]"); // Create file if it doesn't exist
 }
 
 // Function to save links
