@@ -82,16 +82,52 @@ bot.on("text", async (ctx) => {
   try {
     const messageText = ctx.message.text;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-
     const foundLinks = messageText.match(urlRegex);
+
     if (foundLinks) {
-      links.push(...foundLinks);
+      foundLinks.forEach((link) => {
+        const existingEntry = links.find((entry) => entry.link === link && entry.userId === ctx.from.id);
+
+        if (existingEntry) {
+          existingEntry.count += 1; // ✅ Increment count if already exists
+        } else {
+          links.push({
+            link,
+            userId: ctx.from.id,
+            username: ctx.from.username || ctx.from.first_name,
+            count: 1,
+          });
+        }
+      });
+
       fs.writeFileSync("links.json", JSON.stringify(links, null, 2));
-      console.log(`🔗 Links added: ${foundLinks.length}`);
     }
   } catch (error) {
     console.error("❌ Error handling message:", error);
   }
+});
+
+bot.command("doublelinks", async (ctx) => {
+  if (!(await isAuthorized(ctx))) {
+    return ctx.reply("❌ Only admins or the owner can use this command!");
+  }
+
+  if (links.length === 0) {
+    return ctx.reply("📊 No links recorded yet.");
+  }
+
+  const duplicateUsers = links.filter((entry) => entry.count > 1);
+  
+  if (duplicateUsers.length === 0) {
+    return ctx.reply("✅ No users have shared the same link multiple times.");
+  }
+
+  let response = "📌 *Multiple Links Shared:*\n\n";
+  duplicateUsers.forEach((entry, index) => {
+    response += `${index + 1}. ${entry.username} - ${entry.count} times\n`;
+  });
+
+  return ctx.reply(response, { parse_mode: "Markdown" });
 });
 
 // ✅ Track when users join the group
