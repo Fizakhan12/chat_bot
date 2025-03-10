@@ -89,34 +89,36 @@ bot.command("close", async (ctx) => {
 
 // ✅ User Command: Get Total Link Count (on /total)
 bot.command("total", async (ctx) => {
-  ctx.reply(`📊 Total links recorded: ${links.length}`);
+  const totalCount = links.reduce((sum, entry) => sum + (entry.count || 1), 0);
+  ctx.reply(`📊 Total links recorded: ${totalCount}`);
 });
+
 bot.on("message", async (ctx) => {
   const messageText = ctx.message.text;
   const userId = ctx.from.id;
   const username = ctx.from.username || "Unknown";
 
-  // Check if the message contains a link
   const linkRegex = /(https?:\/\/[^\s]+)/g;
   const foundLinks = messageText.match(linkRegex);
 
   if (foundLinks) {
     foundLinks.forEach((link) => {
-      // Check if the user already shared this link
+      // Find if the link already exists in the array
       let existingEntry = links.find(
         (entry) => entry.userId === userId && entry.link === link
       );
 
       if (existingEntry) {
-        existingEntry.count += 1;
+        existingEntry.count += 1; // ✅ Increment count
       } else {
-        links.push({ userId, username, link, count: 1 });
+        links.push({ userId, username, link, count: 1 }); // ✅ Initialize count
       }
     });
 
     saveLinks();
   }
 });
+
 // ✅ Track text messages for links
 bot.on("text", async (ctx) => {
   if (!countingActive) return;
@@ -158,7 +160,18 @@ bot.command("doublelinks", async (ctx) => {
     return ctx.reply("📊 No links recorded yet.");
   }
 
-  const duplicates = links.filter((entry) => entry.count > 1);
+  const linkCountMap = new Map();
+
+  links.forEach(({ userId, username, link, count }) => {
+    const key = `${userId}-${link}`;
+    if (linkCountMap.has(key)) {
+      linkCountMap.get(key).count += count; // Increment count
+    } else {
+      linkCountMap.set(key, { username, count });
+    }
+  });
+
+  const duplicates = [...linkCountMap.values()].filter(entry => entry.count > 1);
 
   if (duplicates.length === 0) {
     return ctx.reply("✅ No users have shared duplicate links.");
@@ -171,6 +184,7 @@ bot.command("doublelinks", async (ctx) => {
 
   ctx.reply(response, { parse_mode: "Markdown" });
 });
+
 
 
 
