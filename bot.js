@@ -1,5 +1,7 @@
 const { Telegraf } = require("telegraf");
 const fs = require("fs");
+const linksFile = "links.json";
+
 require("dotenv").config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -7,6 +9,16 @@ const admins = [5303351099]; // Replace with actual admin IDs
 let ownerId = null; // ✅ Store owner ID dynamically
 
 let links = [];
+
+// Load existing data
+if (fs.existsSync(linksFile)) {
+  links = JSON.parse(fs.readFileSync(linksFile, "utf8"));
+}
+
+// Function to save links
+function saveLinks() {
+  fs.writeFileSync(linksFile, JSON.stringify(links, null, 2));
+}
 let users = [];
 let countingActive = true; // ✅ Flag to enable/disable counting
 
@@ -74,7 +86,32 @@ bot.command("close", async (ctx) => {
 bot.command("total", async (ctx) => {
   ctx.reply(`📊 Total links recorded: ${links.length}`);
 });
+bot.on("message", async (ctx) => {
+  const messageText = ctx.message.text;
+  const userId = ctx.from.id;
+  const username = ctx.from.username || "Unknown";
 
+  // Check if the message contains a link
+  const linkRegex = /(https?:\/\/[^\s]+)/g;
+  const foundLinks = messageText.match(linkRegex);
+
+  if (foundLinks) {
+    foundLinks.forEach((link) => {
+      // Check if the user already shared this link
+      let existingEntry = links.find(
+        (entry) => entry.userId === userId && entry.link === link
+      );
+
+      if (existingEntry) {
+        existingEntry.count += 1;
+      } else {
+        links.push({ userId, username, link, count: 1 });
+      }
+    });
+
+    saveLinks();
+  }
+});
 // ✅ Track text messages for links
 bot.on("text", async (ctx) => {
   if (!countingActive) return;
@@ -112,27 +149,25 @@ bot.on("new_chat_members", async (ctx) => {
   }
 });
 bot.command("doublelinks", async (ctx) => {
-  if (!(await isAuthorized(ctx))) {
-    return ctx.reply("❌ Only admins or the owner can use this command!");
-  }
-
   if (links.length === 0) {
     return ctx.reply("📊 No links recorded yet.");
   }
 
-  const duplicateUsers = links.filter((entry) => entry.count > 1);
-  
-  if (duplicateUsers.length === 0) {
-    return ctx.reply("✅ No users have shared the same link multiple times.");
+  const duplicates = links.filter((entry) => entry.count > 1);
+
+  if (duplicates.length === 0) {
+    return ctx.reply("✅ No users have shared duplicate links.");
   }
 
-  let response = "📌 *Multiple Links Shared:*\n\n";
-  duplicateUsers.forEach((entry, index) => {
+  let response = "📌 *Users with Duplicate Links:*\n\n";
+  duplicates.forEach((entry, index) => {
     response += `${index + 1}. ${entry.username} - ${entry.count} times\n`;
   });
 
-  return ctx.reply(response, { parse_mode: "Markdown" });
+  ctx.reply(response, { parse_mode: "Markdown" });
 });
+
+
 
 // ✅ List Users Command
 bot.command("list", async (ctx) => {
