@@ -82,31 +82,35 @@ bot.on("text", async (ctx) => {
   try {
     const messageText = ctx.message.text;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
+
     const foundLinks = messageText.match(urlRegex);
-
     if (foundLinks) {
-      foundLinks.forEach((link) => {
-        const existingEntry = links.find((entry) => entry.link === link && entry.userId === ctx.from.id);
-
-        if (existingEntry) {
-          existingEntry.count += 1; // ✅ Increment count if already exists
-        } else {
-          links.push({
-            link,
-            userId: ctx.from.id,
-            username: ctx.from.username || ctx.from.first_name,
-            count: 1,
-          });
-        }
-      });
-
+      links.push(...foundLinks);
       fs.writeFileSync("links.json", JSON.stringify(links, null, 2));
+      console.log(`🔗 Links added: ${foundLinks.length}`);
     }
   } catch (error) {
     console.error("❌ Error handling message:", error);
   }
 });
 
+// ✅ Track when users join the group
+bot.on("new_chat_members", async (ctx) => {
+  try {
+    ctx.message.new_chat_members.forEach((member) => {
+      const userId = member.id;
+      const username = member.username || member.first_name;
+
+      if (!users.some((u) => u.id === userId)) {
+        users.push({ id: userId, username });
+        fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+        console.log(`✅ User joined: ${username} (${userId})`);
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error handling new member:", error);
+  }
+});
 bot.command("doublelinks", async (ctx) => {
   if (!(await isAuthorized(ctx))) {
     return ctx.reply("❌ Only admins or the owner can use this command!");
@@ -128,24 +132,6 @@ bot.command("doublelinks", async (ctx) => {
   });
 
   return ctx.reply(response, { parse_mode: "Markdown" });
-});
-
-// ✅ Track when users join the group
-bot.on("new_chat_members", async (ctx) => {
-  try {
-    ctx.message.new_chat_members.forEach((member) => {
-      const userId = member.id;
-      const username = member.username || member.first_name;
-
-      if (!users.some((u) => u.id === userId)) {
-        users.push({ id: userId, username });
-        fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
-        console.log(`✅ User joined: ${username} (${userId})`);
-      }
-    });
-  } catch (error) {
-    console.error("❌ Error handling new member:", error);
-  }
 });
 
 // ✅ List Users Command
